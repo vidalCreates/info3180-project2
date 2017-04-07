@@ -38,28 +38,28 @@ def login():
 
         if form.validate_on_submit():
             # get data from form
-            username = form.username.data
+            email = form.email.data
             password = form.password.data
 
             # retrieve user from database
-            user = UserProfile.query.filter_by(username=username, password=password).first()
+            user = UserProfile.query.filter_by(email=email, password=password).first()
 
             if user is not None:
                 # login user
                 login_user(user)
 
                 # flash user for successful login
-                flash('Logged in as '+current_user.first_name, 'success')
+                flash('Logged in as '+current_user.first_name+" "+current_user.last_name, 'success')
 
                 # redirect user to their wishlist page
                 return redirect(url_for("wishlist", userid=current_user.get_id()))
 
             # flash user for failed login
-            flash('Your username or password is incorrect', 'danger')
+            flash('Your email or password is incorrect', 'danger')
             return redirect(url_for("login")) #
         else:
             # flash user for incomplete form
-            flash('Please fill in both fields', 'danger')
+            flash('Invalid login data, please try again', 'danger')
     return render_template("login.html", form=form)
 
 
@@ -82,23 +82,28 @@ def register():
             # get data from form
             firstname = form.firstname.data
             lastname = form.lastname.data
-            username = form.username.data
+            email = form.email.data
             password = form.password.data
+
+            # retrieve user from database
+            user = UserProfile.query.filter_by(email=email, password=password).first()
+
+            # if the user already exists then flash error message and redirect back to the registration page
+            if user is not None:
+                flash('An account with that email address already exists','danger')
+                return redirect(url_for('register'))
 
             # create user object
             user = UserProfile(id=userid,
                                first_name=firstname,
                                last_name=lastname,
-                               username=username,
+                               email=email,
                                password=password)
 
             # insert user into UserProfile
             db.session.add(user)
             db.session.commit()
-            #quit()
-
-            # flash the user for successful registration
-            flash("Registration Successful")
+            # quit()
 
             # logout old user
             logout_user()
@@ -106,17 +111,20 @@ def register():
             # login new user
             login_user(user)
 
+            # flash the user for successful registration
+            flash('Registration Successful, Welcome '+current_user.first_name, 'success')
+
             # redirect user to their wishlist page
             return redirect(url_for("wishlist", userid=user.get_id()))
 
         else:
             flash('Please fill in all fields', 'danger')
-            return redirect(url_for('home'))
+            return redirect(url_for('register'))
 
     return render_template("register.html", form=form)
 
 
-@app.route("/api/users/<userid>/wishlist", methods=["GET" ,"POST"])
+@app.route("/api/users/<userid>/wishlist", methods=["GET", "POST"])
 @login_required
 def wishlist(userid):
     return render_template("wishlist.html")
@@ -129,6 +137,11 @@ def wishlist(userid):
 def load_user(id):
     return UserProfile.query.get(int(id))
 
+
+@login_manager.unauthorized_handler
+def unauthorized_handler():
+    flash('Restricted access. Please login to access this page.', 'danger')
+    return redirect(url_for('login'))
 ###
 # The functions below should be applicable to all Flask apps.
 ###
@@ -155,8 +168,8 @@ def add_header(response):
 @app.errorhandler(404)
 def page_not_found(error):
     """Custom 404 page."""
-    return render_template('404.html'), 404
+    return render_template('404.html'), error
 
 
 if __name__ == '__main__':
-    app.run(debug=True,host="0.0.0.0",port="8080")
+    app.run(debug=True, host="0.0.0.0", port="8080")

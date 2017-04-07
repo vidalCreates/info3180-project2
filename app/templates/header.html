@@ -14,7 +14,7 @@
             <li class="active"><a href="{{ url_for('home') }}">Home</a></li>
             <li><a href="{{ url_for('about') }}">About</a></li>
             {% if current_user.is_authenticated %}
-            <li><a href="{{ url_for('wishlist',userid=current_user.get_id()) }}">My Wishlist</a></li>
+            <li><a href="{{ url_for('wishlist',userid=current_user.get_id()) }}">{{ current_user.first_name }}'s Wishlist</a></li>
             {% endif %}
           </ul>
 
