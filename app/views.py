@@ -12,6 +12,8 @@ from forms import LoginForm
 from forms import RegisterForm
 from models import UserProfile
 
+import uuid
+
 
 ###
 # Routing for your application.
@@ -22,36 +24,42 @@ def home():
     """Render website's home page."""
     return render_template('home.html')
 
+
 @app.route('/about/')
 def about():
     """Render the website's about page."""
     return render_template('about.html')
 
+
 @app.route("/api/users/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
     if request.method == "POST":
-        # change this to actually validate the entire form submission
-        # and not just one field
+
         if form.validate_on_submit():
-            # Get the username and password values from the form.
+            # get data from form
             username = form.username.data
             password = form.password.data
 
-            #retrieve user from database
+            # retrieve user from database
             user = UserProfile.query.filter_by(username=username, password=password).first()
 
-            # get user id, load into session
-            if user != None:
+            if user is not None:
+                # login user
                 login_user(user)
-                #load user wishlist and flash success message
+
+                # flash user for successful login
                 flash('Logged in as '+current_user.first_name, 'success')
+
+                # redirect user to their wishlist page
                 return redirect(url_for("wishlist", userid=current_user.get_id()))
-            #flash failure message to the user
-            flash('the username or password entered is incorrect', 'danger')
+
+            # flash user for failed login
+            flash('Your username or password is incorrect', 'danger')
             return redirect(url_for("login")) #
         else:
-            flash('please fill in both fields', 'danger')
+            # flash user for incomplete form
+            flash('Please fill in both fields', 'danger')
     return render_template("login.html", form=form)
 
 
@@ -62,24 +70,51 @@ def logout():
     flash('Logged out.', 'danger')
     return redirect(url_for("login"))
 
+
 @app.route("/api/users/register", methods=["GET", "POST"])
 def register():
     form = RegisterForm()
     if request.method == "POST":
         if form.validate_on_submit():
-            pass
-        #get data from form
-        #create user object
-        #insert user into UserProfile
-        #log the user in
-        #flash the user for successful registration
-        #return redirect(url_for("wishlist",userid=user.get_id())
+            # generate userid
+            userid = str(uuid.uuid4().fields[-1])[:8]
+
+            # get data from form
+            firstname = form.firstname.data
+            lastname = form.lastname.data
+            username = form.username.data
+            password = form.password.data
+
+            # create user object
+            user = UserProfile(id=userid,
+                               first_name=firstname,
+                               last_name=lastname,
+                               username=username,
+                               password=password)
+
+            # insert user into UserProfile
+            db.session.add(user)
+            db.session.commit()
+            #quit()
+
+            # flash the user for successful registration
+            flash("Registration Successful")
+
+            # logout old user
+            logout_user()
+
+            # login new user
+            login_user(user)
+
+            # redirect user to their wishlist page
+            return redirect(url_for("wishlist", userid=user.get_id()))
+
         else:
-            flash('please fill in all fields', 'danger')
-
-
+            flash('Please fill in all fields', 'danger')
+            return redirect(url_for('home'))
 
     return render_template("register.html", form=form)
+
 
 @app.route("/api/users/<userid>/wishlist", methods=["GET" ,"POST"])
 @login_required
@@ -88,6 +123,8 @@ def wishlist(userid):
 
 # user_loader callback. This callback is used to reload the user object from
 # the user ID stored in the session
+
+
 @login_manager.user_loader
 def load_user(id):
     return UserProfile.query.get(int(id))
@@ -95,6 +132,7 @@ def load_user(id):
 ###
 # The functions below should be applicable to all Flask apps.
 ###
+
 
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):
