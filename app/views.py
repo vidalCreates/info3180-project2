@@ -38,16 +38,20 @@ def login():
             username = form.username.data
             password = form.password.data
 
+            #retrieve user from database
             user = UserProfile.query.filter_by(username=username, password=password).first()
-            print user
+
             # get user id, load into session
             if user != None:
                 login_user(user)
-                # remember to flash a message to the user
-                flash('Logged in as '+user.first_name, 'success')
-                return redirect(url_for("wishlist", userid=user.get_id()))
-            flash('Log in failed', 'danger')
-            return redirect(url_for("home")) # they should be redirected to a secure-page route instead
+                #load user wishlist and flash success message
+                flash('Logged in as '+current_user.first_name, 'success')
+                return redirect(url_for("wishlist", userid=current_user.get_id()))
+            #flash failure message to the user
+            flash('the username or password entered is incorrect', 'danger')
+            return redirect(url_for("login")) #
+        else:
+            flash('please fill in both fields', 'danger')
     return render_template("login.html", form=form)
 
 
@@ -68,8 +72,13 @@ def register():
         #create user object
         #insert user into UserProfile
         #log the user in
+        #flash the user for successful registration
         #return redirect(url_for("wishlist",userid=user.get_id())
-        flash('Registration failed', 'danger')
+        else:
+            flash('please fill in all fields', 'danger')
+
+
+
     return render_template("register.html", form=form)
 
 @app.route("/api/users/<userid>/wishlist", methods=["GET" ,"POST"])
