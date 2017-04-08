@@ -7,7 +7,7 @@ This file creates your application.
 
 import os
 from app import app, db, login_manager
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from forms import LoginForm
@@ -16,7 +16,6 @@ from forms import NewItemForm
 from models import UserProfile, WishlistItem
 
 import uuid
-
 
 ###
 # Routing for your application.
@@ -243,7 +242,7 @@ def add_header(response):
 @app.errorhandler(404)
 def page_not_found(error):
     """Custom 404 page."""
-    return render_template('404.html'), error
+    return render_template('404.html'), 404
 
 
 if __name__ == '__main__':
