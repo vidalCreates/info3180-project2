@@ -127,7 +127,7 @@ def register():
     return render_template("register.html", form=form)
 
 
-@app.route("/api/users/<userid>/wishlist", methods=["GET", "POST"])
+@app.route("/api/users/<int:userid>/wishlist", methods=["GET", "POST"])
 @login_required
 def wishlist(userid):
     # file_folder = app.config['UPLOAD_FOLDER']
@@ -179,6 +179,30 @@ def wishlist(userid):
         # retrieve user from database
         items = WishlistItem.query.filter_by(owner=current_user.get_id()).all()
     return render_template("wishlist.html", userid=current_user.get_id(), form=form, items=items)
+
+
+@app.route("/api/users/<int:userid>/wishlist/<int:itemid>", methods=["GET", "DELETE"])
+@login_required
+def removeitem(userid, itemid):
+    if request.method == "DELETE":
+        # flash user for successful delete
+        flash('Item deleted', 'success')
+
+        # remove item from wishlist
+        db.session.delete(WishlistItem.query.filter_by(id=itemid).first())
+        db.session.commit()
+
+        # redirect user to their wishlist page
+        return redirect(url_for("wishlist", userid=current_user.get_id()))
+    else:
+        # flash user for successful delete
+        flash('Item deleted', 'success')
+
+        # remove item from wishlist
+        db.session.delete(WishlistItem.query.filter_by(id=itemid).first())
+        db.session.commit()
+
+        return redirect(url_for("wishlist", userid=current_user.get_id()))
 
 # user_loader callback. This callback is used to reload the user object from
 # the user ID stored in the session

@@ -6,7 +6,15 @@
     <button type="button" class="btn btn-info btn-lg" data-toggle="modal" data-target="#newItem">New Item</button>
     <hr/>
     {% for item in items %}
-        <div class="alert alert-info"><strong>{{ item.title }}  |  {{ item.description }}  |  {{ item.webaddress }}</strong></div>
+        <div class="item">
+        <form  action="{{ url_for('removeitem', userid=current_user.get_id(), itemid=item.id) }}" method="delete">
+            <button type="submit" name="submit"  class="close">&times;</button>
+        </form>
+            <div class="item-title"><strong>{{ item.title }}</strong></div><br/>
+            <div class="item-description">{{ item.description }}</div><br/>
+            <div class="item-webaddress">{{ item.webaddress }}</div>
+
+        </div>
     {% endfor %}
 
     <!-- Modal -->
