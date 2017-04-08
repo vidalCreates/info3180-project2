@@ -5,12 +5,15 @@ Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
 This file creates your application.
 """
 
+import os
 from app import app, db, login_manager
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user, login_required
+from werkzeug.utils import secure_filename
 from forms import LoginForm
 from forms import RegisterForm
-from models import UserProfile
+from forms import NewItemForm
+from models import UserProfile, WishlistItem
 
 import uuid
 
@@ -22,7 +25,7 @@ import uuid
 @app.route('/')
 def home():
     """Render website's home page."""
-    return render_template('home.html')
+    return render_template('home.html', form=None)
 
 
 @app.route('/about/')
@@ -90,7 +93,7 @@ def register():
 
             # if the user already exists then flash error message and redirect back to the registration page
             if user is not None:
-                flash('An account with that email address already exists','danger')
+                flash('An account with that email address already exists', 'danger')
                 return redirect(url_for('register'))
 
             # create user object
@@ -115,7 +118,7 @@ def register():
             flash('Registration Successful, Welcome '+current_user.first_name, 'success')
 
             # redirect user to their wishlist page
-            return redirect(url_for("wishlist", userid=user.get_id()))
+            return redirect(url_for("wishlist", userid=current_user.get_id()))
 
         else:
             flash('Please fill in all fields', 'danger')
@@ -127,7 +130,55 @@ def register():
 @app.route("/api/users/<userid>/wishlist", methods=["GET", "POST"])
 @login_required
 def wishlist(userid):
-    return render_template("wishlist.html")
+    # file_folder = app.config['UPLOAD_FOLDER']
+    form = NewItemForm()
+    if request.method == "POST":
+        if form.validate_on_submit():
+            # generate item id
+            id = str(uuid.uuid4().fields[-1])[:8]
+
+            # get data from form
+            title = form.title.data
+            description = form.description.data
+            webaddress = form.webaddress.data
+
+            # NB: upgrade model to include image url after scraping site
+            '''
+            file = request.files['file']
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(file_folder, filename))
+            '''
+            # retrieve item from database
+            item = WishlistItem.query.filter_by(title=title, owner=current_user.get_id()).first()
+
+            # if the user already exists then flash error message and redirect back to the registration page
+            if item is not None:
+                flash(''+title+' already exists in your wishlist', 'danger')
+                return redirect(url_for('wishlist', userid=current_user.get_id()))
+
+            # create wishlist object
+            item = WishlistItem(id=id,
+                                owner=current_user.get_id(),
+                                title=title,
+                                description=description,
+                                webaddress=webaddress)
+
+            # insert item into WishlistItem
+            db.session.add(item)
+            db.session.commit()
+
+            # redirect user to their wishlist page
+            return redirect(url_for("wishlist", userid=current_user.get_id()))
+        else:
+            # flash message for failed item addition
+            flash('Invalid item data, please try again', 'danger')
+
+            # redirect user to their wishlist page
+            return redirect(url_for("wishlist", userid=current_user.get_id()))
+    else:
+        # retrieve user from database
+        items = WishlistItem.query.filter_by(owner=current_user.get_id()).all()
+    return render_template("wishlist.html", userid=current_user.get_id(), form=form, items=items)
 
 # user_loader callback. This callback is used to reload the user object from
 # the user ID stored in the session
