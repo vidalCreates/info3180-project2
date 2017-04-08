@@ -14,3 +14,18 @@ body {
     padding:15px 15px 15px 15px;
     margin-top:20px;
 }
+
+.thumbnail{
+    position:relative;
+    display:inline-block;
+    float:left;
+    width:25%;
+    height:100px;
+    background-color: cadetblue;
+    border-radius:2px;
+    margin-left:25px;
+    margin-right:20px;
+    margin-bottom:20px;
+    padding:15px 15px 15px 15px;
+    margin-top:20px;
+}

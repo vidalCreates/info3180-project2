@@ -16,6 +16,8 @@ from forms import NewItemForm
 from models import UserProfile, WishlistItem
 
 import uuid
+import re
+from image_getter import getimageurls
 
 ###
 # Routing for your application.
@@ -206,6 +208,18 @@ def removeitem(userid, itemid):
 # user_loader callback. This callback is used to reload the user object from
 # the user ID stored in the session
 
+
+@app.route('/api/thumbnails', methods=['GET'])
+def thumbnails():
+    # get url from form
+    url = request.args.get('url')
+
+    pattern = re.compile("(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9]\.[^\s]{2,})")
+    print pattern.match(url)
+    if pattern.match(url):
+        # get and return thumbnails
+        return jsonify({'error': None, 'message': 'Success', 'thumbnails': getimageurls(url)})
+    return jsonify({'error': None, 'message': 'Success', 'thumbnails': [url_for('static', filename="uploads/placeholder.png")]})
 
 @login_manager.user_loader
 def load_user(id):

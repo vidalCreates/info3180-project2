@@ -8,6 +8,11 @@ Flask-Migrate
 Flask-Login
 psycopg2
 
+Flask
+requests
+beautifulsoup4
+
+
 # ----------------------
 # Production Server
 # ----------------------
