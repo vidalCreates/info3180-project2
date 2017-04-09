@@ -60,8 +60,10 @@ def login():
 
             # flash user for failed login
             flash('Your email or password is incorrect', 'danger')
-            return redirect(url_for("login")) #
+            return redirect(url_for("login"))
         else:
+            print "NOT VALIDATED"
+            print form.errors
             # flash user for incomplete form
             flash('Invalid login data, please try again', 'danger')
     return render_template("login.html", form=form)
@@ -71,7 +73,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash('Logged out.', 'danger')
+    flash('Logged out.', 'info')
     return redirect(url_for("login"))
 
 
@@ -122,6 +124,8 @@ def register():
             return redirect(url_for("wishlist", userid=current_user.get_id()))
 
         else:
+            print "NOT VALIDATED"
+            print form.errors
             flash('Please fill in all fields', 'danger')
             return redirect(url_for('register'))
 
