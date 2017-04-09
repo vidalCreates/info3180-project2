@@ -142,17 +142,12 @@ def wishlist(userid):
             title = form.title.data
             description = form.description.data
             webaddress = form.webaddress.data
+            thumbnail = request.form['thumbnail']
 
-            # NB: upgrade model to include image url after scraping site
-            '''
-            file = request.files['file']
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(file_folder, filename))
-            '''
             # retrieve item from database
             item = WishlistItem.query.filter_by(title=title, owner=current_user.get_id()).first()
 
-            # if the user already exists then flash error message and redirect back to the registration page
+            # if the item already exists then flash error message and redirect back to the wishlist page
             if item is not None:
                 flash(''+title+' already exists in your wishlist', 'danger')
                 return redirect(url_for('wishlist', userid=current_user.get_id()))
@@ -162,7 +157,8 @@ def wishlist(userid):
                                 owner=current_user.get_id(),
                                 title=title,
                                 description=description,
-                                webaddress=webaddress)
+                                webaddress=webaddress,
+                                thumbnail=thumbnail)
 
             # insert item into WishlistItem
             db.session.add(item)
@@ -214,12 +210,17 @@ def thumbnails():
     # get url from form
     url = request.args.get('url')
 
+    # establish regular expression for url
     pattern = re.compile("(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9]\.[^\s]{2,})")
-    print pattern.match(url)
+
+    # if the text entered is a url then scrape for images
     if pattern.match(url):
         # get and return thumbnails
         return jsonify({'error': None, 'message': 'Success', 'thumbnails': getimageurls(url)})
+
+    # otherwise display default image
     return jsonify({'error': None, 'message': 'Success', 'thumbnails': [url_for('static', filename="uploads/placeholder.png")]})
+
 
 @login_manager.user_loader
 def load_user(id):

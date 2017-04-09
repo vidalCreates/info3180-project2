@@ -31,6 +31,7 @@ class WishlistItem(db.Model):
     title = db.Column(db.String(80))
     description = db.Column(db.String(100))
     webaddress = db.Column(db.String(255))
+    thumbnail = db.Column(db.String(255))
 
     def is_authenticated(self):
         return True

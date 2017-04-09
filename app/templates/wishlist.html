@@ -10,10 +10,12 @@
         <form  action="{{ url_for('removeitem', userid=current_user.get_id(), itemid=item.id) }}" method="delete">
             <button type="submit" name="submit"  class="close">&times;</button>
         </form>
-            <div class="item-title"><strong>{{ item.title }}</strong></div><br/>
-            <div class="item-description">{{ item.description }}</div><br/>
-            <div class="item-webaddress">{{ item.webaddress }}</div>
-
+            <div>
+                <div><img class="item-thumbnail" src="{{ item.thumbnail }}"/></div>
+                <div class="item-title"><strong>{{ item.title }}</strong></div><br/>
+                <div class="item-description">{{ item.description }}</div><br/>
+                <div class="item-webaddress"><a href="{{ item.webaddress }}">Link</a></div>
+            </div>
         </div>
     {% endfor %}
 
@@ -62,7 +64,10 @@
                         {% raw %}
                         <div>
                             <div ng-repeat="thumb in thumbnails track by $index">
-                                <img class="thumbnail" src="{{ thumb }}">
+                                <div class="thumbnail">
+                                    <input type="radio" name="thumbnail" value="{{ thumb }}" required>
+                                    <img src="{{ thumb }}">
+                                </div>
                             </div>
 
                         </div>
