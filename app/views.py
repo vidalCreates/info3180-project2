@@ -1,63 +1,99 @@
 """
-Flask Documentation:     http://flask.pocoo.org/docs/
-Jinja2 Documentation:    http://jinja.pocoo.org/2/documentation/
-Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
-This file creates your application.
-"""
 
+Flask Documentation:     http://flask.pocoo.org/docs/
+
+Jinja2 Documentation:    http://jinja.pocoo.org/2/documentation/
+
+Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
+
+This file creates your application.
+
+"""
 import os
 from app import app, db, login_manager
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, _request_ctx_stack
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from forms import LoginForm
 from forms import RegisterForm
 from forms import NewItemForm
 from models import UserProfile, WishlistItem
+import jwt
+from functools import wraps
+import base64
 
-import uuid
-import re
-from image_getter import getimageurls
+
 
 ###
+
 # Routing for your application.
+
 ###
+
+
 
 @app.route('/')
 def home():
     """Render website's home page."""
     return render_template('home.html', form=None)
 
-
 @app.route('/about/')
 def about():
     """Render the website's about page."""
-    return render_template('about.html')
+    return render_template('about.html') 
+
+# Create a JWT @requires_auth decorator
+# This decorator can be used to denote that a specific route should check
+# for a valid JWT token before displaying the contents of that route.
+
+def requires_auth(f):
+  @wraps(f)
+  def decorated(*args, **kwargs):
+    auth = request.headers.get('Authorization', None)
+    if not auth:
+      return jsonify({'code': 'authorization_header_missing', 'description': 'Authorization header is expected'}), 401
+    parts = auth.split()
+    if parts[0].lower() != 'bearer':
+      return jsonify({'code': 'invalid_header', 'description': 'Authorization header must start with Bearer'}), 401
+    elif len(parts) == 1:
+      return jsonify({'code': 'invalid_header', 'description': 'Token not found'}), 401
+    elif len(parts) > 2:
+      return jsonify({'code': 'invalid_header', 'description': 'Authorization header must be Bearer + \s + token'}), 401
+    token = parts[1]
+    try:
+         payload = jwt.decode(token, 'some-secret')
+    except jwt.ExpiredSignature:
+        return jsonify({'code': 'token_expired', 'description': 'token is expired'}), 401
+    except jwt.DecodeError:    
+        return jsonify({'code': 'token_invalid_signature', 'description': 'Token signature is invalid'}), 401
+    g.current_user = user = payload
+    return f(*args, **kwargs)
+  return decorated
+
+
+
 
 
 @app.route("/api/users/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
     if request.method == "POST":
-
         if form.validate_on_submit():
             # get data from form
             email = form.email.data
             password = form.password.data
-
             # retrieve user from database
             user = UserProfile.query.filter_by(email=email, password=password).first()
-
             if user is not None:
                 # login user
                 login_user(user)
-
                 # flash user for successful login
+                print "logged in"
                 flash('Logged in as '+current_user.first_name+" "+current_user.last_name, 'success')
+                
 
                 # redirect user to their wishlist page
                 return redirect(url_for("wishlist", userid=current_user.get_id()))
-
             # flash user for failed login
             flash('Your email or password is incorrect', 'danger')
             return redirect(url_for("login"))
@@ -66,8 +102,18 @@ def login():
             print form.errors
             # flash user for incomplete form
             flash('Invalid login data, please try again', 'danger')
-    return render_template("login.html", form=form)
+    return render_template("login.html", form=form, token=generate_token())
 
+## This route is just used to demonstrate a JWT being generated.
+@app.route('/token')
+def generate_token():
+    # Under normal circumstances you would generate this token when a user
+    # logs into your web application and you send it back to the frontend
+    # where it can be stored in localStorage for any subsequent API requests.
+    #generate token
+    payload = {'sub': '12345', 'email': current_user.get_email(), 'password': current_user.password}
+    token = jwt.encode(payload, 'secret123', algorithm='HS256')
+    return jsonify(error=None, data={'token': token}, message="Token Generated")
 
 @app.route("/api/users/logout")
 @login_required
@@ -84,51 +130,40 @@ def register():
         if form.validate_on_submit():
             # generate userid
             userid = str(uuid.uuid4().fields[-1])[:8]
-
             # get data from form
             firstname = form.firstname.data
             lastname = form.lastname.data
             email = form.email.data
             password = form.password.data
-
             # retrieve user from database
             user = UserProfile.query.filter_by(email=email, password=password).first()
-
             # if the user already exists then flash error message and redirect back to the registration page
             if user is not None:
                 flash('An account with that email address already exists', 'danger')
                 return redirect(url_for('register'))
-
             # create user object
             user = UserProfile(id=userid,
                                first_name=firstname,
                                last_name=lastname,
                                email=email,
                                password=password)
-
             # insert user into UserProfile
             db.session.add(user)
             db.session.commit()
             # quit()
-
             # logout old user
             logout_user()
-
             # login new user
             login_user(user)
-
             # flash the user for successful registration
             flash('Registration Successful, Welcome '+current_user.first_name, 'success')
-
             # redirect user to their wishlist page
             return redirect(url_for("wishlist", userid=current_user.get_id()))
-
         else:
             print "NOT VALIDATED"
             print form.errors
             flash('Please fill in all fields', 'danger')
             return redirect(url_for('register'))
-
     return render_template("register.html", form=form)
 
 
@@ -141,21 +176,17 @@ def wishlist(userid):
         if form.validate_on_submit():
             # generate item id
             id = str(uuid.uuid4().fields[-1])[:8]
-
             # get data from form
             title = form.title.data
             description = form.description.data
             webaddress = form.webaddress.data
             thumbnail = request.form['thumbnail']
-
             # retrieve item from database
             item = WishlistItem.query.filter_by(title=title, owner=current_user.get_id()).first()
-
             # if the item already exists then flash error message and redirect back to the wishlist page
             if item is not None:
                 flash(''+title+' already exists in your wishlist', 'danger')
                 return redirect(url_for('wishlist', userid=current_user.get_id()))
-
             # create wishlist object
             item = WishlistItem(id=id,
                                 owner=current_user.get_id(),
@@ -163,17 +194,14 @@ def wishlist(userid):
                                 description=description,
                                 webaddress=webaddress,
                                 thumbnail=thumbnail)
-
             # insert item into WishlistItem
             db.session.add(item)
             db.session.commit()
-
             # redirect user to their wishlist page
             return redirect(url_for("wishlist", userid=current_user.get_id()))
         else:
             # flash message for failed item addition
             flash('Invalid item data, please try again', 'danger')
-
             # redirect user to their wishlist page
             return redirect(url_for("wishlist", userid=current_user.get_id()))
     else:
@@ -188,23 +216,18 @@ def removeitem(userid, itemid):
     if request.method == "DELETE":
         # flash user for successful delete
         flash('Item deleted', 'success')
-
         # remove item from wishlist
         db.session.delete(WishlistItem.query.filter_by(id=itemid).first())
         db.session.commit()
-
         # redirect user to their wishlist page
         return redirect(url_for("wishlist", userid=current_user.get_id()))
     else:
         # flash user for successful delete
         flash('Item deleted', 'success')
-
         # remove item from wishlist
         db.session.delete(WishlistItem.query.filter_by(id=itemid).first())
         db.session.commit()
-
         return redirect(url_for("wishlist", userid=current_user.get_id()))
-
 # user_loader callback. This callback is used to reload the user object from
 # the user ID stored in the session
 
@@ -213,17 +236,15 @@ def removeitem(userid, itemid):
 def thumbnails():
     # get url from form
     url = request.args.get('url')
-
     # establish regular expression for url
     pattern = re.compile("(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9]\.[^\s]{2,})")
-
     # if the text entered is a url then scrape for images
     if pattern.match(url):
         # get and return thumbnails
         return jsonify({'error': None, 'message': 'Success', 'thumbnails': getimageurls(url)})
-
     # otherwise display default image
     return jsonify({'error': None, 'message': 'Success', 'thumbnails': [url_for('static', filename="uploads/placeholder.png")]})
+
 
 
 @login_manager.user_loader
@@ -231,10 +252,13 @@ def load_user(id):
     return UserProfile.query.get(int(id))
 
 
+
+
 @login_manager.unauthorized_handler
 def unauthorized_handler():
     flash('Restricted access. Please login to access this page.', 'danger')
     return redirect(url_for('login'))
+
 ###
 # The functions below should be applicable to all Flask apps.
 ###

@@ -6,6 +6,7 @@ class UserProfile(db.Model):
     last_name = db.Column(db.String(80))
     email = db.Column(db.String(80), unique=True)
     password = db.Column(db.String(80))
+    token = db.Column(db.String(200), unique=True)
 
     def is_authenticated(self):
         return True
@@ -15,6 +16,12 @@ class UserProfile(db.Model):
 
     def is_anonymous(self):
         return False
+
+    def get_email(self):
+        try:
+            return unicode(self.email)  # python 2 support
+        except NameError:
+            return str(self.email)  # python 3 support
 
     def get_id(self):
         try:
