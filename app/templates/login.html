@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block main %}
-  <div class="login-form center-block">
+  <div class="login-form center-block" ng-app="project2" ng-controller="project2Controller">
     <h2>Log in</h2>
     <br/>
     {% include 'flash_messages.html' %}
@@ -15,7 +15,7 @@
         {{ form.password.label }}
         {{ form.password(class='form-control', placeholder="**********") }}
       </div>
-      <button type="submit" name="submit" class="btn btn-primary btn-block">Log in</button>
+      <button type="submit" name="submit" class="btn btn-primary btn-block" ng-click="getToken()">Log in</button>
     </form>
   </div>
 {% endblock %}

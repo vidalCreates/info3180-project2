@@ -28,18 +28,6 @@ import base64
 # Routing for your application.
 ###
 
-@app.route('/')
-def home():
-    """Render website's home page."""
-    return render_template('home.html', form=None)
-
-
-@app.route('/about/')
-def about():
-    """Render the website's about page."""
-    return render_template('about.html')
-
-
 # Create a JWT @requires_auth decorator
 # This decorator can be used to denote that a specific route should check
 # for a valid JWT token before displaying the contents of that route.
@@ -73,17 +61,16 @@ def requires_auth(f):
 
   return decorated
 
-## This route is just used to demonstrate a JWT being generated.
-@app.route('/token')
-def generate_token():
-    # Under normal circumstances you would generate this token when a user
-    # logs into your web application and you send it back to the frontend
-    # where it can be stored in localStorage for any subsequent API requests.
-    #generate token
-    payload = {'sub': '12345', 'email': current_user.email, 'password': current_user.password}
-    token = jwt.encode(payload, 'secret123', algorithm='HS256')
+@app.route('/')
+def home():
+    """Render website's home page."""
+    return render_template('home.html', form=None)
 
-    return jsonify(error=None, data={'token': token}, message="Token Generated")
+
+@app.route('/about/')
+def about():
+    """Render the website's about page."""
+    return render_template('about.html')
 
 
 @app.route("/api/users/login", methods=["GET", "POST"])
@@ -106,9 +93,11 @@ def login():
                 # flash user for successful login
                 flash('Logged in as '+current_user.first_name+" "+current_user.last_name, 'success')
 
+                #generate token
+                token=generate_token()
 
                 # redirect user to their wishlist page
-                return redirect(url_for("wishlist", userid=current_user.get_id()))
+                return redirect(url_for("wishlist", userid=current_user.get_id(),token1=token))
 
             # flash user for failed login
             flash('Your email or password is incorrect', 'danger')
@@ -118,11 +107,22 @@ def login():
             print form.errors
             # flash user for incomplete form
             flash('Invalid login data, please try again', 'danger')
-    return render_template("login.html", form=form, token=generate_token())
+    return render_template("login.html", form=form)
 
+
+## This route is just used to demonstrate a JWT being generated.
+@app.route('/token')
+def generate_token():
+    # Under normal circumstances you would generate this token when a user
+    # logs into your web application and you send it back to the frontend
+    # where it can be stored in localStorage for any subsequent API requests.
+    #generate token
+    payload = {'sub': '12345', 'email': current_user.email, 'password': current_user.password}
+    token = jwt.encode(payload, 'secret123', algorithm='HS256')
+    return jsonify(error=None, data={'token': token}, message="Token Generated")
 
 @app.route("/api/users/logout")
-@login_required
+
 def logout():
     logout_user()
     flash('Logged out.', 'info')
@@ -185,7 +185,7 @@ def register():
 
 
 @app.route("/api/users/<int:userid>/wishlist", methods=["GET", "POST"])
-@login_required
+
 def wishlist(userid):
     # file_folder = app.config['UPLOAD_FOLDER']
     form = NewItemForm()
@@ -235,7 +235,7 @@ def wishlist(userid):
 
 
 @app.route("/api/users/<int:userid>/wishlist/<int:itemid>", methods=["GET", "DELETE"])
-@login_required
+
 def removeitem(userid, itemid):
     if request.method == "DELETE":
         # flash user for successful delete
