@@ -10,12 +10,12 @@ app.controller('project2Controller', function ($scope, $http) {
   $scope.getToken = function() {
     $http.get('/token')
       .then(function(response) {
-        let jwt_token = response.data.data.token;
+        jwt_token = response.data.data.token;
 
         // We store this token in localStorage so that subsequent API requests
         // can use the token until it expires or is deleted.
         localStorage.setItem('token', jwt_token);
-        console.info('Token generated and added to localStorage.');
+        console.log('Token generated and added to localStorage.');
         $scope.token = jwt_token;
       });
   };
@@ -37,20 +37,20 @@ app.controller('project2Controller', function ($scope, $http) {
         'Authorization': 'Basic ' + localStorage.getItem('token')
       }
     }).then(function(response) {
-      let alert = document.querySelector('.alert');
+      alert = document.querySelector('.alert');
       alert.classList.remove('alert-info', 'alert-danger');
       alert.classList.add('alert-success');
 
-      let result = response.data;
+      result = response.data;
       // successful response
-      $scope.result = `success !`;
+      $scope.result = "success !";
     }, function(response) {
-      let alert = document.querySelector('.alert');
+      alert = document.querySelector('.alert');
       alert.classList.remove('alert-info');
       alert.classList.add('alert-danger');
 
       // unsuccessful response (ie. there was an error)
-      $scope.result = `There was an error. ${response.data.description}`;
+      $scope.result = "There was an error. ${response.data.description}";
     });
   };
 

@@ -16,3 +16,7 @@ class NewItemForm(FlaskForm):
     title = StringField('Title', validators=[InputRequired()])
     description = StringField('Description', validators=[InputRequired()])
     webaddress = StringField('Web Address', validators=[InputRequired()])
+
+class ShareForm(FlaskForm):
+    recipientemail = StringField('Email', validators=[InputRequired(), Email()])
+    name = StringField('Name', validators=[InputRequired()])

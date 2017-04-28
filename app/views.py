@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 from forms import LoginForm
 from forms import RegisterForm
 from forms import NewItemForm
+from forms import ShareForm
 from models import UserProfile, WishlistItem
 
 import uuid
@@ -185,10 +186,12 @@ def register():
 
 
 @app.route("/api/users/<int:userid>/wishlist", methods=["GET", "POST"])
-
 def wishlist(userid):
     # file_folder = app.config['UPLOAD_FOLDER']
     form = NewItemForm()
+    form2 = ShareForm()
+    form3 = LoginForm()
+
     if request.method == "POST":
         if form.validate_on_submit():
             # generate item id
@@ -220,6 +223,8 @@ def wishlist(userid):
             db.session.add(item)
             db.session.commit()
 
+            flash(''+title+' was added to your wishlist', 'success')
+
             # redirect user to their wishlist page
             return redirect(url_for("wishlist", userid=current_user.get_id()))
         else:
@@ -229,13 +234,57 @@ def wishlist(userid):
             # redirect user to their wishlist page
             return redirect(url_for("wishlist", userid=current_user.get_id()))
     else:
-        # retrieve user from database
+        # retrieve user wishlist items from database
         items = WishlistItem.query.filter_by(owner=current_user.get_id()).all()
-    return render_template("wishlist.html", userid=current_user.get_id(), form=form, items=items)
+    return render_template("wishlist.html", userid=current_user.get_id(), form=form, form2=form2, form3=form3, items=items)
+
+@app.route("/api/users/<int:userid>/wishlist/share", methods=["GET","POST"])
+def sharewishlist(userid):
+    import smtplib
+    form = ShareForm()
+    form2 = LoginForm()
+
+    if request.method == "POST":
+        if form.validate_on_submit() and form2.validate_on_submit():
+            from_addr = current_user.email
+            to_addr = form.recipientemail.data
+            from_name = current_user.first_name+' '+current_user.last_name
+            to_name = form.name.data
+            subject = 'My Wishlist!'
+            message = """
+            From: {} <{}>
+            To: {} <{}>
+            Subject: {}
+
+            {}
+            """
+            # retrieve user wishlist items from database
+            items = WishlistItem.query.filter_by(owner=current_user.get_id()).all()
+
+            message_body = 'This is my wishlist'
+            for item in items:
+                message_body += "\n-->"+item.title
+
+            message_to_send = message.format(from_name, from_addr, to_name, to_addr, subject, message_body)
+            # Credentials (if needed)
+            username = form2.email.data
+            password = form2.password.data
+
+            # The actual mail send
+            server = smtplib.SMTP('smtp.gmail.com:587')
+            server.starttls()
+            server.login(username, password)
+            server.sendmail(from_addr, to_addr, message_to_send)
+            server.quit()
+
+            flash('Your Wishlist was Shared with '+to_name, 'success')
+        else:
+            flash('Invalid sharing data, please try again', 'danger')
+        return redirect(url_for("wishlist", userid=current_user.get_id()))
+    return redirect(url_for("wishlist", userid=current_user.get_id()))
 
 
 @app.route("/api/users/<int:userid>/wishlist/<int:itemid>", methods=["GET", "DELETE"])
-
 def removeitem(userid, itemid):
     if request.method == "DELETE":
         # flash user for successful delete
